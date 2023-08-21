@@ -2,16 +2,39 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
-// const User = require("./models/user");
+const bcrypt = require("bcrypt");
+const mailgun = require("mailgun-js");
+const mongoose = require("mongoose");
+const User = require("./models/User");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-const MARVEL_API_KEY = process.env.MARVEL_API_KEY;
+const {
+  MAILGUN_API_KEY,
+  MAILGUN_DOMAIN,
+  PORT,
+  JWT_SECRET_KEY,
+  MARVEL_API_KEY,
+} = process.env;
 const MARVEL_API_URL = "https://lereacteur-marvel-api.herokuapp.com";
+const port = PORT || 3000;
+const mg = mailgun({ apiKey: MAILGUN_API_KEY, domain: MAILGUN_DOMAIN });
 
-const port = process.env.PORT || 3000;
+const connectToDatabase = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("connected to MongoDB");
+  } catch (error) {
+    console.error("Could not connect to MongoDB", error);
+  }
+};
+connectToDatabase();
 
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Bienvenue sur mon serveur Marvel!" });
@@ -23,13 +46,16 @@ app.get("/characters", async (req, res) => {
     if (req.query.name) {
       filters += `&name=${req.query.name}`;
     }
+    if (req.query.skip) {
+      filters += `&skip=${req.query.skip}`;
+    }
     const response = await axios.get(
-      `${MARVEL_API_URL}/characters?apiKey=${MARVEL_API_KEY}${filters}`
+      `https://lereacteur-marvel-api.herokuapp.com/characters?apiKey=${process.env.MARVEL_API_KEY}${filters}`
     );
-    res.status(200).json(response.data);
+
+    return res.status(200).json(response.data);
   } catch (error) {
-    console.error("An error occurred while fetching characters:", error);
-    res.status(500).send("An error occurred");
+    return res.status(400).json({ message: error.message });
   }
 });
 
@@ -94,11 +120,40 @@ app.get("/comics/detail/:comicId", async (req, res) => {
   }
 });
 
-app.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-  const user = new User({ username, password });
-  await user.save();
-  res.json({ success: true });
+app.post("/Signup", async (req, res) => {
+  try {
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const user = new User({
+      email: req.body.email,
+      password: hashedPassword,
+      username: req.body.username,
+    });
+    await user.save();
+    const data = {
+      from: "Louis Olivier <louis.olivier.louiscyrano@gmail.com>",
+      to: req.body.email,
+      subject: "Confirmation d'inscription",
+      text: "Cliquez sur ce lien pour confirmer votre inscription...",
+    };
+
+    mg.messages().send(data, (error, body) => {
+      if (error) {
+        throw error;
+      }
+      const token = jwt.sign({ _id: user._id }, JWT_SECRET_KEY);
+      res.status(200).send({
+        token,
+        message: "Inscription réussie! Veuillez confirmer votre e-mail.",
+      });
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      res.status(400).send({ message: "Cet e-mail existe déjà." }); // Adjusted the error message
+    } else {
+      console.error("Erreur lors de l'inscription:", error);
+      res.status(500).send({ message: "Erreur lors de l'inscription." });
+    }
+  }
 });
 
 app.all("*", (req, res) => {
