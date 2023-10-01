@@ -10,7 +10,14 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+const corsOptions = {
+  origin: "https://lereacteur-marvel.netlify.app",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+app.use(cors(corsOptions));
 
 const {
   MAILGUN_API_KEY,
@@ -89,7 +96,6 @@ app.get("/comic/:comicId", async (req, res) => {
     const comic = await axios.get(
       `https://lereacteur-marvel-api.herokuapp.com/comic/${comicId}?apiKey=${MARVEL_API_KEY}`
     );
-    // console.log(comic.data);
     res.json(comic.data);
   } catch (error) {
     res.status(500).json({ message: "Error fetching data." });
@@ -102,21 +108,10 @@ app.get("/comics/:characterId", async (req, res) => {
     const comics = await axios.get(
       `https://lereacteur-marvel-api.herokuapp.com/comics/${characterId}?apiKey=${MARVEL_API_KEY}`
     );
+    console.log("comics>>>", comics);
     res.json(comics.data);
   } catch (error) {
     res.status(500).json({ message: "Error fetching data." });
-  }
-});
-
-app.get("/comics/detail/:comicId", async (req, res) => {
-  try {
-    const response = await axios.get(
-      `https://gateway.marvel.com/v1/public/comics/${req.params.comicId}?apiKey=${MARVEL_API_KEY}`
-    );
-    res.send(response.data);
-  } catch (error) {
-    console.error("An error occurred while fetching comic details:", error);
-    res.status(500).send("An error occurred");
   }
 });
 
