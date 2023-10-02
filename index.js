@@ -1,4 +1,3 @@
-require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
@@ -19,7 +18,10 @@ const {
   PORT,
   JWT_SECRET_KEY,
   MARVEL_API_KEY,
+  REACT_APP_BACKEND_URL,
 } = process.env;
+
+const BASE_URL = REACT_APP_BACKEND_URL || `http://localhost:${PORT}`;
 const MARVEL_API_URL = "https://lereacteur-marvel-api.herokuapp.com";
 const port = PORT || 3000;
 const mg = mailgun({ apiKey: MAILGUN_API_KEY, domain: MAILGUN_DOMAIN });
