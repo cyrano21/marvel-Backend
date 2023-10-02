@@ -11,13 +11,14 @@ const jwt = require("jsonwebtoken");
 const app = express();
 app.use(express.json());
 
-const corsOptions = {
-  origin: "https://lereacteur-marvel.netlify.app",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
-app.use(cors(corsOptions));
+// const corsOptions = {
+//   origin: "https://lereacteur-marvel.netlify.app",
+//   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+//   credentials: true,
+//   optionsSuccessStatus: 204,
+// };
+// app.use(cors(corsOptions));
+app.use(cors());
 
 const {
   MAILGUN_API_KEY,
